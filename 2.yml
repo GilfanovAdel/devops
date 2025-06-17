@@ -1,0 +1,50 @@
+---
+- hosts: servers
+  become: yes
+
+  vars:
+    new_user: adel
+   
+  tasks:
+    - user:
+        name: "{{ new_user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - user:
+        name: "{{ new_user }}"
+        groups: sudo
+        append: yes
+
+    - file:
+        path: "/home/{{ new_user }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+
+    - authorized_key:
+        user: "{{ new_user }}"
+        key: "{{ ssh_pub_key }}"
+
+    - lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        state: present
+
+    - lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?ChallengeResponseAuthentication'
+        line: 'ChallengeResponseAuthentication no'
+
+    - service:
+        name: ssh
+        state: reloaded
+
+    - file:
+        path: "/opt/{{ new_user }}_data"
+        state: directory
+        mode: '0660'
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
